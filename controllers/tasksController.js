@@ -1,7 +1,18 @@
 // trying to use map, as I read all crud operations are most efficient on this
 // could have used objects, but read about prototype pollution, and really wanted to try this
 let tasks = new Map();
-let currentId = 1;
+
+// not mentioned anywhere, 
+// but from the tests it seems that I'm supposed to load task.json into memory first
+const jsonTasksList = require('../task.json').tasks;
+for (const task of jsonTasksList) {
+  tasks.set(task.id, {
+    title: task.title,
+    description: task.description,
+    completed: task.completed,
+  });
+}
+let currentId = jsonTasksList.length + 1;
 
 exports.getAllTasks = (req, res) => {
   let result = [];
@@ -56,33 +67,22 @@ exports.updateTask = (req, res) => {
   }
 
   const { title, description, completed } = req.body;
-  let updatedFields = []
+  let incorrectFields = [];
 
-  if (typeof title === "string" && title !== "") {
-    task.title = title;
-    updatedFields.push("title");
-  }
+  if (typeof title !== "string" || title === "") incorrectFields.push("title");
+  if (typeof description !== "string" || description === "") incorrectFields.push("description");
+  if (typeof completed !== "boolean") incorrectFields.push("completed");
 
-  if (typeof description === "string" && description !== "") {
-    task.description = description;
-    updatedFields.push("description");
-  }
-
-  if (typeof completed === "boolean") {
-    task.completed = completed;
-    updatedFields.push("completed");
-  }
-
-  if (updatedFields.length === 0) {
+  if (incorrectFields.length !== 0) {
     return res.status(400).send({
-      message: `Could not update task due to incorrect request body format`,
-    });
+      message: `Incorrect / missing fields: ${incorrectFields.join(", ")}`,
+    })
   }
 
-  tasks.set(id, task);
+  tasks.set(id, { title, description, completed });
 
   return res.status(200).send({
-    message: `Successfully updated fields for id ${id}: ${updatedFields.join(", ")}`,
+    message: `Successfully updated task with id ${id}`,
   });
 };
 
