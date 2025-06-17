@@ -12,7 +12,7 @@ for (const task of jsonTasksList) {
     completed: task.completed,
   });
 }
-let currentId = jsonTasksList.length + 1;
+let currentId = Math.max(...tasks.keys()) + 1;
 
 // step 4 - implementing priority levels. 
 // gonna keep it optional to still pass the tests
@@ -22,12 +22,7 @@ exports.getAllTasks = (req, res) => {
   let result = [];
 
   // step 4 - filtering over completed field
-  const completedFilter = (() => {
-    // query parameters are strings, so need to infer correct boolean
-    if (req.query.completed === "true") return true;
-    else if (req.query.completed === "false") return false;
-    else return undefined;
-  })();
+  const completedFilter = { true: true, false: false }[req.query.completed];
   
   // step 4 - Map() already orders it by time of insertion / creation
   for (const [key, value] of tasks) {
@@ -42,6 +37,10 @@ exports.getAllTasks = (req, res) => {
 
 exports.getTaskById = (req, res) => {
   const id = Number(req.params.id);
+  if (Number.isNaN(id)) {
+    return res.status(400).send({ message: `Invalid task id provided: ${req.params.id}`});
+  }
+  
   const task = tasks.get(id);
 
   if (!task) {
@@ -50,7 +49,7 @@ exports.getTaskById = (req, res) => {
     });
   }
 
-  res.status(200).send({ id, ...task})
+  res.status(200).send({ id, ...task })
 };
 
 exports.createTask = (req, res) => {
@@ -75,6 +74,10 @@ exports.createTask = (req, res) => {
 
 exports.updateTask = (req, res) => {
   const id = Number(req.params.id);
+  if (Number.isNaN(id)) {
+    return res.status(400).send({ message: `Invalid task id provided: ${req.params.id}`});
+  }
+  
   const task = tasks.get(id);
 
   if (!task) {
@@ -106,6 +109,10 @@ exports.updateTask = (req, res) => {
 
 exports.deleteTask = (req, res) => {
   const id = Number(req.params.id);
+  if (Number.isNaN(id)) {
+    return res.status(400).send({ message: `Invalid task id provided: ${req.params.id}`});
+  }
+  
   const isDeleted = tasks.delete(id);
 
   if (!isDeleted) {
