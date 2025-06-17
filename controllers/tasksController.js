@@ -14,10 +14,26 @@ for (const task of jsonTasksList) {
 }
 let currentId = jsonTasksList.length + 1;
 
+// step 4 - implementing priority levels. 
+// gonna keep it optional to still pass the tests
+const priorityLevels = require('../utils/constants').priorityLevels;
+
 exports.getAllTasks = (req, res) => {
   let result = [];
+
+  // step 4 - filtering over completed field
+  const completedFilter = (() => {
+    // query parameters are strings, so need to infer correct boolean
+    if (req.query.completed === "true") return true;
+    else if (req.query.completed === "false") return false;
+    else return undefined;
+  })();
   
+  // step 4 - Map() already orders it by time of insertion / creation
   for (const [key, value] of tasks) {
+    // step 4 - filtering over completed field
+    if (typeof completedFilter === "boolean" && value.completed !== completedFilter) continue;
+
     result.push({ id: key, ...value });
   }
 
@@ -38,12 +54,13 @@ exports.getTaskById = (req, res) => {
 };
 
 exports.createTask = (req, res) => {
-  const { title, description, completed } = req.body;
+  const { title, description, completed, priority } = req.body;
   let incorrectFields = [];
 
   if (typeof title !== "string" || title === "") incorrectFields.push("title");
   if (typeof description !== "string" || description === "") incorrectFields.push("description");
   if (typeof completed !== "boolean") incorrectFields.push("completed");
+  if (priority && !priorityLevels.includes(priority)) incorrectFields.push("priority");
 
   if (incorrectFields.length !== 0) {
     return res.status(400).send({
@@ -51,7 +68,7 @@ exports.createTask = (req, res) => {
     })
   }
 
-  tasks.set(currentId, { title, description, completed });
+  tasks.set(currentId, { title, description, completed, priority });
 
   return res.status(201).send({ message: `Task successfully created with id ${currentId++}` });
 };
@@ -66,12 +83,13 @@ exports.updateTask = (req, res) => {
     });
   }
 
-  const { title, description, completed } = req.body;
+  const { title, description, completed, priority } = req.body;
   let incorrectFields = [];
 
   if (typeof title !== "string" || title === "") incorrectFields.push("title");
   if (typeof description !== "string" || description === "") incorrectFields.push("description");
   if (typeof completed !== "boolean") incorrectFields.push("completed");
+  if (priority && !priorityLevels.includes(priority)) incorrectFields.push("priority");
 
   if (incorrectFields.length !== 0) {
     return res.status(400).send({
@@ -79,7 +97,7 @@ exports.updateTask = (req, res) => {
     })
   }
 
-  tasks.set(id, { title, description, completed });
+  tasks.set(id, { title, description, completed, priority });
 
   return res.status(200).send({
     message: `Successfully updated task with id ${id}`,
@@ -98,3 +116,22 @@ exports.deleteTask = (req, res) => {
 
   return res.status(200).send({ message: `Task with id ${id} deleted successfully` });
 };
+
+// step 4 - implementing priority levels. 
+exports.getTasksByPriority = (req, res) => {
+  if (!priorityLevels.includes(req.params.level)) {
+    return res.status(400).send({
+      message: `Invalid priority level ${req.params.level}. Acceptable levels: ${priorityLevels.join(", ")}`,
+    });
+  }
+
+  let result = [];
+
+  for (const [key, value] of tasks) {
+    if (value.priority !== req.params.level) continue;
+
+    result.push({ id: key, ...value });
+  }
+
+  return res.status(200).send(result);
+}
